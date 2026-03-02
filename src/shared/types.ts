@@ -24,7 +24,7 @@ export type getRoomType = {
 
 export type Team = 'red' | 'blue'
 
-export type Parcipant = {
+export type Participant = {
     id: number
     name: string
     team: Team
@@ -32,12 +32,38 @@ export type Parcipant = {
 }
 
 export type RoomInfo_Participant = {
+    roomId: number
     roomName: string
     quizTopic: string
-    parcipantsCount: number
-    questionsCount: number
+    participantsCount: number
+    messages: Chat_message[]
+    team: Team | undefined
 }
 
-export type RoomInfo_Creator = RoomInfo_Participant & {
-    parcipants: Parcipant[]
+export type RoomInfo_Creator = Omit<RoomInfo_Participant, 'team'> & {
+    participants: Participant[]
+}
+
+export type RoomInfo = {
+    ok: true
+    data: RoomInfo_Participant | RoomInfo_Creator
+} | {
+    ok: false
+}
+
+export type Chat_message = {
+    team: Team | 'creator'
+    roomId: number
+    message: string
+}
+
+export type StartGameResponce = {
+    ok: true
+    data: {
+        status: 'started'
+        currentQuestion: string
+        questionsCount: number
+    }
+} | {
+    ok: false
 }

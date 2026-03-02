@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet, redirect } from "react-router-dom";
+import { createBrowserRouter, Link, Outlet, redirect } from "react-router-dom";
 import { StartWindow } from "./components/startWindow/startWindow";
 import { RoomComponent } from "./components/roomComponent/roomComponent";
 export const router = createBrowserRouter([
@@ -6,7 +6,7 @@ export const router = createBrowserRouter([
         path: "/",
         element: (
             <div>
-                <div>Home</div>
+                <Link to="/">Start</Link>
                 <Outlet />
             </div>
         ),
