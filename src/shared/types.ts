@@ -60,10 +60,16 @@ export type Chat_message = {
 export type StartGameResponce = {
     ok: true
     data: {
-        status: 'started'
-        currentQuestion: string
-        questionsCount: number
+        count: { red: number, blue: number }
+        status: 'waiting' | 'playing'
+        currentQuestion: Question | null
     }
 } | {
     ok: false
+}
+
+export type Question = {
+    question: string
+    answers: string[]
+    forTeam: Team
 }

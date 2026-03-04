@@ -15,6 +15,58 @@ const dbRooms = [];
 const TEAM_RED = 'red';
 const TEAM_BLUE = 'blue';
 
+const onAnswer = (bool, room) => {
+    bool ? room.game.count[room.game.currentQuestion.forTeam] += 1 : null
+    room.game.currentQuestion = questions[Math.floor(Math.random() * questions.length)]
+
+    io.to(room.roomId).emit('check_answer', {
+        ok: bool,
+        team: bool ? room.game.currentQuestion.forTeam : null,
+        currentQuestion: {
+            question: room.game.currentQuestion.question,
+            answers: room.game.currentQuestion.answers,
+            forTeam: room.game.currentQuestion.forTeam
+        }
+    })
+}
+
+const questions = [
+    {
+        id: 1,
+        question: 'What is the capital of France?',
+        options: ['Paris', 'London', 'Berlin', 'Rome'],
+        success_answer: 0,
+        forTeam: 'red'
+    },
+    {
+        id: 2,
+        question: 'Which planet is known as the Red Planet?',
+        options: ['Mars', 'Venus', 'Jupiter', 'Saturn'],
+        forTeam: 'blue'
+    },
+    {
+        id: 3,
+        question: 'Who painted the Mona Lisa?',
+        options: ['Leonardo da Vinci', 'Pablo Picasso', 'Vincent van Gogh', 'Michelangelo'],
+        success_answer: 0,
+        forTeam: 'red'
+    },
+    {
+        id: 4,
+        question: 'What is the largest planet in our solar system?',
+        options: ['Jupiter', 'Saturn', 'Neptune', 'Uranus'],
+        success_answer: 0,
+        forTeam: 'blue'
+    },
+    {
+        id: 5,
+        question: 'What is the smallest planet in our solar system?',
+        options: ['Mercury', 'Venus', 'Earth', 'Mars'],
+        success_answer: 0,
+        forTeam: 'red'
+    }
+]
+
 function pickBalancedTeam(participants) {
     let redCount = 0;
     let blueCount = 0;
@@ -58,11 +110,15 @@ app.post('/create_room', (req, res) => {
         maxParticipants,
         questionsCount,
         participants: [],
-        questions: [],
+        questions: questions,
         activeQuestion: null,
         creatorId: null,
         messages: [],
         game: {
+            count: {
+                red: 0,
+                blue: 0
+            },
             status: 'waiting',
             currentQuestion: null
         }
@@ -114,7 +170,7 @@ app.post('/get_room', (req, res) => {
     }
 })
 
-app.get('init_game/:roomId', (req, res) => {
+app.get('/init_start_game/:roomId', (req, res) => {
     const { roomId } = req.params;
     const room = dbRooms.find(room => room.roomId === Number(roomId));
     if (room) {
@@ -152,7 +208,7 @@ io.on('connection', (socket) => {
             socket.join(roomChannel);
             socket.emit('room_joined', {
                 participants: room.participants,
-                team: room.participants.find(participant => participant.id === socket.id).team | undefined
+                team: room.participants.find(participant => participant.id === socket.id)?.team
             });
             socket.to(roomChannel).emit('user_joined', room.participants);
         }
@@ -177,6 +233,39 @@ io.on('connection', (socket) => {
             }
         });
     });
+
+    socket.on('start_game', () => {
+        const room = dbRooms.find((entry) => entry.creatorId === socket.id);
+        if (!room) {
+            return;
+        }
+
+        room.game.status = 'playing';
+        room.game.currentQuestion = questions[0];
+
+        io.to(room.roomId).emit('game_started', {
+            status: 'playing',
+            currentQuestion: {
+                question: room.game.currentQuestion.question,
+                answers: room.game.currentQuestion.answers,
+                forTeam: room.game.currentQuestion.forTeam
+            }
+        });
+    })
+
+    socket.on('answer', ({ roomId, team, answer }) => {
+        const room = dbRooms.find((entry) => entry.roomId === roomId);
+        if (!room) {
+            return;
+        }
+
+        (answer === room.game.currentQuestion.successAnswer
+            && room.game.currentQuestion
+            && team === room.game.currentQuestion.forTeam)
+            ? onAnswer(true, room, team)
+
+            : onAnswer(false, room, team)
+    })
 });
 
 httpServer.listen(3000, () => {
